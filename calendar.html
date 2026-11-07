@@ -1,0 +1,124 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Cozy Calendar</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:12px;background:#f5f0e5;color:#52634e;font-family:Georgia,serif}
+.calendar{max-width:340px;margin:auto;background:#fffaf0;border:1px solid #d9dfca;border-radius:18px;overflow:hidden;box-shadow:0 5px 18px #75866a20}
+.banner{height:90px;background:linear-gradient(120deg,#879e87,#d9dfc8 55%,#b9c9bb);display:flex;align-items:center;justify-content:center;text-align:center;color:#fffaf0;font-size:30px}
+.banner small{display:block;font-size:12px;letter-spacing:2px;margin-top:5px}
+.content{padding:13px}
+h2{font-size:20px;margin:0 0 4px;color:#566c53}
+.subtitle{font-size:11px;color:#9a927e;margin-bottom:12px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.month{font-size:16px;font-weight:bold}
+button{border:0;border-radius:9px;background:#e5eadc;color:#566c53;padding:7px 10px;cursor:pointer;font-family:inherit}
+.nav{display:flex;gap:5px}
+.week,.days{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}
+.week{font-size:10px;color:#929783;margin-bottom:5px}
+.day{min-height:39px;border-radius:8px;background:#f5f3eb;padding:5px 1px 2px;font-size:12px;cursor:pointer;position:relative}
+.day:hover{outline:1px solid #91a88e}
+.day.today{background:#dce8d7;font-weight:bold}
+.day.selected{outline:2px solid #8da68b}
+.day .dot{display:block;width:5px;height:5px;border-radius:50%;margin:3px auto 0;background:#d89aaf}
+.day.empty{background:transparent;cursor:default}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;font-size:10px;color:#817f70}
+.legend span:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;background:var(--c)}
+.tasks{border-top:1px solid #e9e5d9;margin-top:12px;padding-top:10px}
+.taskhead{font-size:13px;font-weight:bold;margin-bottom:7px}
+.taskrow{font-size:12px;padding:7px;border-radius:7px;background:#f1eee5;margin:5px 0;display:flex;justify-content:space-between;gap:6px}
+.taskrow button{padding:2px 6px}
+.add{width:100%;margin-top:8px;background:#8da68b;color:white}
+.modal{display:none;margin-top:9px;padding:9px;background:#f1eee5;border-radius:10px}
+input,select{width:100%;padding:8px;border:1px solid #d8d9c9;border-radius:7px;margin:4px 0;background:#fffdf7;color:#52634e}
+.modal button{margin-top:5px}
+.note{font-size:10px;text-align:center;color:#aaa18e;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="calendar">
+ <div class="banner">☔ 🌿 ☁️<div><small>A LITTLE SPACE FOR MY DAYS</small></div> 🌱</div>
+ <div class="content">
+  <h2>🌧️ My Cozy Calendar</h2>
+  <div class="subtitle">Little plans, gentle days, happy moments.</div>
+  <div class="top">
+   <div class="month" id="month"></div>
+   <div class="nav"><button id="prev">‹</button><button id="next">›</button></div>
+  </div>
+  <div class="week"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+  <div class="days" id="days"></div>
+  <div class="legend">
+   <span style="--c:#d89aaf">Personal</span>
+   <span style="--c:#8da68b">Work</span>
+   <span style="--c:#a99acb">Learning</span>
+   <span style="--c:#dfbd72">Errands</span>
+  </div>
+  <div class="tasks">
+   <div class="taskhead" id="taskdate">Choose a date</div>
+   <div id="tasklist"></div>
+   <button class="add" id="add">＋ Add a little plan</button>
+   <div class="modal" id="modal">
+    <input id="taskname" placeholder="What would you like to do?">
+    <select id="category">
+     <option>Personal</option><option>Work</option><option>Learning</option><option>Errands</option>
+    </select>
+    <button id="save">Save task</button>
+    <button id="cancel">Cancel</button>
+   </div>
+  </div>
+  <div class="note">☁️ Take it one little day at a time ☁️</div>
+ </div>
+</div>
+<script>
+const colors={Personal:"#d89aaf",Work:"#8da68b",Learning:"#a99acb",Errands:"#dfbd72"};
+let shown=new Date();shown.setDate(1);
+let selected=new Date();
+let tasks=JSON.parse(localStorage.getItem("cozyCalendarTasks")||"{}");
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function render(){
+ const y=shown.getFullYear(),m=shown.getMonth();
+ document.getElementById("month").textContent=shown.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+ const first=new Date(y,m,1).getDay(),count=new Date(y,m+1,0).getDate();
+ const grid=document.getElementById("days");grid.innerHTML="";
+ for(let i=0;i<first;i++){let e=document.createElement("div");e.className="day empty";grid.append(e)}
+ for(let n=1;n<=count;n++){
+  let d=new Date(y,m,n),k=key(d),el=document.createElement("div");
+  el.className="day"+(key(d)===key(new Date())?" today":"")+(key(d)===key(selected)?" selected":"");
+  el.textContent=n;
+  if(tasks[k]?.length){let dot=document.createElement("i");dot.className="dot";dot.style.background=colors[tasks[k][0].cat]||"#d89aaf";el.append(dot)}
+  el.onclick=()=>{selected=d;render()};grid.append(el);
+ }
+ renderTasks();
+}
+function renderTasks(){
+ let k=key(selected),list=tasks[k]||[];
+ document.getElementById("taskdate").textContent=selected.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+ const box=document.getElementById("tasklist");box.innerHTML="";
+ if(!list.length)box.textContent="No plans yet. Enjoy a little breathing room. 🌿";
+ list.forEach((t,i)=>{
+  let row=document.createElement("div");row.className="taskrow";row.style.borderLeft="4px solid "+(colors[t.cat]||"#d89aaf");
+  let name=document.createElement("span");name.textContent=t.name+" · "+t.cat;
+  let del=document.createElement("button");del.textContent="×";del.onclick=()=>{tasks[k].splice(i,1);persist()};
+  row.append(name,del);box.append(row);
+ });
+}
+function persist(){localStorage.setItem("cozyCalendarTasks",JSON.stringify(tasks));render()}
+document.getElementById("prev").onclick=()=>{shown.setMonth(shown.getMonth()-1);render()};
+document.getElementById("next").onclick=()=>{shown.setMonth(shown.getMonth()+1);render()};
+document.getElementById("add").onclick=()=>document.getElementById("modal").style.display="block";
+document.getElementById("cancel").onclick=()=>document.getElementById("modal").style.display="none";
+document.getElementById("save").onclick=()=>{
+ let name=document.getElementById("taskname").value.trim();if(!name)return;
+ let k=key(selected);tasks[k]=tasks[k]||[];
+ tasks[k].push({name,cat:document.getElementById("category").value});
+ document.getElementById("taskname").value="";
+ document.getElementById("modal").style.display="none";persist();
+};
+render();
+</script>
+</body>
+</html>
